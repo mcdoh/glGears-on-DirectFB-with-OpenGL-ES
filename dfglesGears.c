@@ -330,7 +330,7 @@ int main(int argc, char *argv[])
 
 	// get the primary surface, i.e. the surface of the primary layer we have exclusive access to
 	dsc.flags = DSDESC_CAPS;
-	dsc.caps  = DSCAPS_PRIMARY | DSCAPS_DOUBLE;
+	dsc.caps  = DSCAPS_PRIMARY | DSCAPS_DOUBLE | DSCAPS_OPENGL_HINT;
 
 	DFBCHECK(dfb->CreateSurface(dfb, &dsc, &primary));
 
