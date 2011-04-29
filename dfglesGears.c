@@ -29,10 +29,10 @@
 #include <string.h>
 #include <math.h>
 
-#include <GL/gl.h>
-
 #include <directfb.h>
 #include <directfbgl.h>
+
+#include <GLES/gl.h>
 
 
 // the super interface
@@ -90,7 +90,7 @@ static inline unsigned long get_millis()
 //		teeth - number of teeth
 //		tooth_depth - depth of tooth
 //
-
+/*
 static void gear(GLfloat inner_radius, GLfloat outer_radius, GLfloat width, GLint teeth, GLfloat tooth_depth)
 {
 	GLint i;
@@ -214,12 +214,12 @@ static void gear(GLfloat inner_radius, GLfloat outer_radius, GLfloat width, GLin
 	glEnd();
 
 }
-
+*/
 static GLfloat view_rotx = 20.0, view_roty = 30.0, view_rotz = 0.0;
 static GLfloat inc_rotx = 0, inc_roty = 0, inc_rotz = 0;
 static GLint gear1, gear2, gear3;
 static GLfloat angle = 0.0;
-
+/*
 static void draw(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -310,7 +310,7 @@ static void init(int argc, char *argv[])
 		}
 	}
 }
-
+*/
 int main(int argc, char *argv[])
 {
 	int quit = 0;
@@ -348,8 +348,8 @@ int main(int argc, char *argv[])
 
 	DFBCHECK(primary_gl->Lock(primary_gl));
 
-	init(argc, argv);
-	reshape(screen_width, screen_height);
+//	init(argc, argv);
+//	reshape(screen_width, screen_height);
 
 	DFBCHECK(primary_gl->Unlock(primary_gl));
 
@@ -362,7 +362,7 @@ int main(int argc, char *argv[])
 
 		DFBCHECK(primary_gl->Lock(primary_gl));
 
-		draw();
+//		draw();
 
 		DFBCHECK(primary_gl->Unlock(primary_gl));
 
