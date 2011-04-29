@@ -79,6 +79,8 @@ static inline unsigned long get_millis()
 #define M_PI 3.14159265
 #endif
 
+static GLint autoexit = 0;
+
 //
 //	Draw a gear wheel.  You'll probably want to call this function when
 //	building a display list since we do a lot of trig here.
@@ -263,7 +265,7 @@ static void reshape(int width, int height)
 	glLoadIdentity();
 	glTranslatef(0.0, 0.0, -40.0);
 }
-
+*/
 static void init(int argc, char *argv[])
 {
 	static GLfloat pos[4] = {5.0, 5.0, 10.0, 0.0};
@@ -278,39 +280,28 @@ static void init(int argc, char *argv[])
 	glEnable(GL_LIGHT0);
 	glEnable(GL_DEPTH_TEST);
 
-	// make the gears
-	gear1 = glGenLists(1);
-	glNewList(gear1, GL_COMPILE);
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, red);
-	gear(1.0, 4.0, 1.0, 20, 0.7);
-	glEndList();
+	glShadeModel(GL_SMOOTH);
 
-	gear2 = glGenLists(1);
-	glNewList(gear2, GL_COMPILE);
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, green);
-	gear(0.5, 2.0, 2.0, 10, 0.7);
-	glEndList();
-
-	gear3 = glGenLists(1);
-	glNewList(gear3, GL_COMPILE);
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, blue);
-	gear(1.3, 2.0, 0.5, 10, 0.7);
-	glEndList();
-
-	glEnable(GL_NORMALIZE);
+	glEnableClientState(GL_NORMAL_ARRAY);
+	glEnableClientState(GL_VERTEX_ARRAY);
 
 	for (i=1; i<argc; i++)
 	{
-		if (strcmp(argv[i], "-info")==0)
+		if (strcmp(argv[i],"-info") == 0)
 		{
 			printf("GL_RENDERER   = %s\n", (char *) glGetString(GL_RENDERER));
 			printf("GL_VERSION    = %s\n", (char *) glGetString(GL_VERSION));
 			printf("GL_VENDOR     = %s\n", (char *) glGetString(GL_VENDOR));
 			printf("GL_EXTENSIONS = %s\n", (char *) glGetString(GL_EXTENSIONS));
 		}
+		else if (strcmp(argv[i],"-exit") == 0)
+		{
+			autoexit = 30;
+			printf("Auto Exit after %i seconds.\n", autoexit );
+		}
 	}
 }
-*/
+
 int main(int argc, char *argv[])
 {
 	int quit = 0;
@@ -348,7 +339,7 @@ int main(int argc, char *argv[])
 
 	DFBCHECK(primary_gl->Lock(primary_gl));
 
-//	init(argc, argv);
+	init(argc, argv);
 //	reshape(screen_width, screen_height);
 
 	DFBCHECK(primary_gl->Unlock(primary_gl));
