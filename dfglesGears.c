@@ -305,7 +305,7 @@ static void draw(void)
 
 	glPopMatrix();
 }
-
+*/
 // new window size or exposure
 static void reshape(int width, int height)
 {
@@ -314,12 +314,12 @@ static void reshape(int width, int height)
 	glViewport(0, 0, (GLint) width, (GLint) height);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glFrustum(-1.0, 1.0, -h, h, 5.0, 60.0);
+	glFrustumf(-1.0, 1.0, -h, h, 5.0, 60.0);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glTranslatef(0.0, 0.0, -40.0);
 }
-*/
+
 static void init(int argc, char *argv[])
 {
 	static GLfloat pos[4] = {5.0, 5.0, 10.0, 0.0};
@@ -399,7 +399,7 @@ int main(int argc, char *argv[])
 	DFBCHECK(primary_gl->Lock(primary_gl));
 
 	init(argc, argv);
-//	reshape(screen_width, screen_height);
+	reshape(screen_width, screen_height);
 
 	DFBCHECK(primary_gl->Unlock(primary_gl));
 
