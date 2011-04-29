@@ -81,6 +81,22 @@ static inline unsigned long get_millis()
 
 static GLint autoexit = 0;
 
+typedef struct
+{
+	GLfloat pos[3];
+	GLfloat norm[3];
+} vertex_t;
+
+typedef struct
+{
+	vertex_t *vertices;
+	GLshort *indices;
+	GLfloat color[4];
+	int nvertices;
+	int nindices;
+	GLuint ibo;
+} gear_t;
+
 //
 //	Draw a gear wheel.  You'll probably want to call this function when
 //	building a display list since we do a lot of trig here.
@@ -92,134 +108,172 @@ static GLint autoexit = 0;
 //		teeth - number of teeth
 //		tooth_depth - depth of tooth
 //
-/*
-static void gear(GLfloat inner_radius, GLfloat outer_radius, GLfloat width, GLint teeth, GLfloat tooth_depth)
+
+static gear_t* gear(GLfloat inner_radius, GLfloat outer_radius, GLfloat width,
+					GLint teeth, GLfloat tooth_depth, GLfloat color[])
 {
-	GLint i;
+	GLint i, j;
 	GLfloat r0, r1, r2;
-	GLfloat angle, da;
-	GLfloat u, v, len;
+	GLfloat ta, da;
+	GLfloat u1, v1, u2, v2, len;
+	GLfloat cos_ta, cos_ta_1da, cos_ta_2da, cos_ta_3da, cos_ta_4da;
+	GLfloat sin_ta, sin_ta_1da, sin_ta_2da, sin_ta_3da, sin_ta_4da;
+	GLshort ix0, ix1, ix2, ix3, ix4, ix5;
+	vertex_t *vt, *nm;
+	GLshort *ix;
+
+	gear_t *gear = calloc(1, sizeof(gear_t));
+	gear->nvertices = teeth * 40;
+	gear->nindices = teeth * 66 * 3;
+	gear->vertices = calloc(gear->nvertices, sizeof(vertex_t));
+	gear->indices = calloc(gear->nindices, sizeof(GLshort));
+	memcpy(&gear->color[0], &color[0], sizeof(GLfloat) * 4);
 
 	r0 = inner_radius;
 	r1 = outer_radius - tooth_depth / 2.0;
 	r2 = outer_radius + tooth_depth / 2.0;
-
 	da = 2.0 * M_PI / teeth / 4.0;
 
-	glShadeModel(GL_FLAT);
+	vt = gear->vertices;
+	nm = gear->vertices;
+	ix = gear->indices;
 
-	glNormal3f(0.0, 0.0, 1.0);
+#define VERTEX(x,y,z) ((vt->pos[0] = x),(vt->pos[1] = y),(vt->pos[2] = z), (vt++ - gear->vertices))
+#define NORMAL(x,y,z) ((nm->norm[0] = x),(nm->norm[1] = y),(nm->norm[2] = z), (nm++ - gear->vertices))
+#define INDEX(a,b,c) ((*ix++ = a),(*ix++ = b),(*ix++ = c))
 
-	// draw front face
-	glBegin(GL_QUAD_STRIP);
-	for (i = 0; i <= teeth; i++)
+	for (i = 0; i < teeth; i++)
 	{
-		angle = i * 2.0 * M_PI / teeth;
-		glVertex3f(r0 * cos(angle), r0 * sin(angle), width * 0.5);
-		glVertex3f(r1 * cos(angle), r1 * sin(angle), width * 0.5);
-		if (i < teeth)
-		{
-			glVertex3f(r0 * cos(angle), r0 * sin(angle), width * 0.5);
-			glVertex3f(r1 * cos(angle + 3 * da), r1 * sin(angle + 3 * da), width * 0.5);
+		ta = i * 2.0 * M_PI / teeth;
+
+		cos_ta = cos(ta);
+		cos_ta_1da = cos(ta + da);
+		cos_ta_2da = cos(ta + 2 * da);
+		cos_ta_3da = cos(ta + 3 * da);
+		cos_ta_4da = cos(ta + 4 * da);
+		sin_ta = sin(ta);
+		sin_ta_1da = sin(ta + da);
+		sin_ta_2da = sin(ta + 2 * da);
+		sin_ta_3da = sin(ta + 3 * da);
+		sin_ta_4da = sin(ta + 4 * da);
+
+		u1 = r2 * cos_ta_1da - r1 * cos_ta;
+		v1 = r2 * sin_ta_1da - r1 * sin_ta;
+		len = sqrt(u1 * u1 + v1 * v1);
+		u1 /= len;
+		v1 /= len;
+		u2 = r1 * cos_ta_3da - r2 * cos_ta_2da;
+		v2 = r1 * sin_ta_3da - r2 * sin_ta_2da;
+
+		// front face
+		ix0 = VERTEX(r0 * cos_ta,          r0 * sin_ta,          width * 0.5);
+		ix1 = VERTEX(r1 * cos_ta,          r1 * sin_ta,          width * 0.5);
+		ix2 = VERTEX(r0 * cos_ta,          r0 * sin_ta,          width * 0.5);
+		ix3 = VERTEX(r1 * cos_ta_3da,      r1 * sin_ta_3da,      width * 0.5);
+		ix4 = VERTEX(r0 * cos_ta_4da,      r0 * sin_ta_4da,      width * 0.5);
+		ix5 = VERTEX(r1 * cos_ta_4da,      r1 * sin_ta_4da,      width * 0.5);
+		for (j = 0; j < 6; j++) {
+			NORMAL(0.0,                  0.0,                  1.0);
 		}
-	}
-	glEnd();
+		INDEX(ix0, ix1, ix2);
+		INDEX(ix1, ix3, ix2);
+		INDEX(ix2, ix3, ix4);
+		INDEX(ix3, ix5, ix4);
 
-	// draw front sides of teeth
-	glBegin(GL_QUADS);
-	da = 2.0 * M_PI / teeth / 4.0;
-	for (i = 0; i < teeth; i++)
-	{
-		angle = i * 2.0 * M_PI / teeth;
-
-		glVertex3f(r1 * cos(angle), r1 * sin(angle), width * 0.5);
-		glVertex3f(r2 * cos(angle + da), r2 * sin(angle + da), width * 0.5);
-		glVertex3f(r2 * cos(angle + 2 * da), r2 * sin(angle + 2 * da), width * 0.5);
-		glVertex3f(r1 * cos(angle + 3 * da), r1 * sin(angle + 3 * da), width * 0.5);
-	}
-	glEnd();
-
-	glNormal3f(0.0, 0.0, -1.0);
-
-	// draw back face
-	glBegin(GL_QUAD_STRIP);
-	for (i = 0; i <= teeth; i++)
-	{
-		angle = i * 2.0 * M_PI / teeth;
-		glVertex3f(r1 * cos(angle), r1 * sin(angle), -width * 0.5);
-		glVertex3f(r0 * cos(angle), r0 * sin(angle), -width * 0.5);
-		if (i < teeth)
-		{
-			glVertex3f(r1 * cos(angle + 3 * da), r1 * sin(angle + 3 * da), -width * 0.5);
-			glVertex3f(r0 * cos(angle), r0 * sin(angle), -width * 0.5);
+		// front sides of teeth
+		ix0 = VERTEX(r1 * cos_ta,          r1 * sin_ta,          width * 0.5);
+		ix1 = VERTEX(r2 * cos_ta_1da,      r2 * sin_ta_1da,      width * 0.5);
+		ix2 = VERTEX(r1 * cos_ta_3da,      r1 * sin_ta_3da,      width * 0.5);
+		ix3 = VERTEX(r2 * cos_ta_2da,      r2 * sin_ta_2da,      width * 0.5);
+		for (j = 0; j < 4; j++) {
+			NORMAL(0.0,                  0.0,                  1.0);
 		}
+		INDEX(ix0, ix1, ix2);
+		INDEX(ix1, ix3, ix2);
+
+		// back face
+		ix0 = VERTEX(r1 * cos_ta,          r1 * sin_ta,          -width * 0.5);
+		ix1 = VERTEX(r0 * cos_ta,          r0 * sin_ta,          -width * 0.5);
+		ix2 = VERTEX(r1 * cos_ta_3da,      r1 * sin_ta_3da,      -width * 0.5);
+		ix3 = VERTEX(r0 * cos_ta,          r0 * sin_ta,          -width * 0.5);
+		ix4 = VERTEX(r1 * cos_ta_4da,      r1 * sin_ta_4da,      -width * 0.5);
+		ix5 = VERTEX(r0 * cos_ta_4da,      r0 * sin_ta_4da,      -width * 0.5);
+		for (j = 0; j < 6; j++) {
+			NORMAL(0.0,                  0.0,                  -1.0);
+		}
+		INDEX(ix0, ix1, ix2);
+		INDEX(ix1, ix3, ix2);
+		INDEX(ix2, ix3, ix4);
+		INDEX(ix3, ix5, ix4);
+
+		// back sides of teeth
+		ix0 = VERTEX(r1 * cos_ta_3da,      r1 * sin_ta_3da,      -width * 0.5);
+		ix1 = VERTEX(r2 * cos_ta_2da,      r2 * sin_ta_2da,      -width * 0.5);
+		ix2 = VERTEX(r1 * cos_ta,          r1 * sin_ta,          -width * 0.5);
+		ix3 = VERTEX(r2 * cos_ta_1da,      r2 * sin_ta_1da,      -width * 0.5);
+		for (j = 0; j < 4; j++) {
+			NORMAL(0.0,                  0.0,                  -1.0);
+		}
+		INDEX(ix0, ix1, ix2);
+		INDEX(ix1, ix3, ix2);
+
+		// draw outward faces of teeth
+		ix0 = VERTEX(r1 * cos_ta,          r1 * sin_ta,          width * 0.5);
+		ix1 = VERTEX(r1 * cos_ta,          r1 * sin_ta,          -width * 0.5);
+		ix2 = VERTEX(r2 * cos_ta_1da,      r2 * sin_ta_1da,      width * 0.5);
+		ix3 = VERTEX(r2 * cos_ta_1da,      r2 * sin_ta_1da,      -width * 0.5);
+		for (j = 0; j < 4; j++) {
+			NORMAL(v1,                   -u1,                  0.0);
+		}
+		INDEX(ix0, ix1, ix2);
+		INDEX(ix1, ix3, ix2);
+		ix0 = VERTEX(r2 * cos_ta_1da,      r2 * sin_ta_1da,      width * 0.5);
+		ix1 = VERTEX(r2 * cos_ta_1da,      r2 * sin_ta_1da,      -width * 0.5);
+		ix2 = VERTEX(r2 * cos_ta_2da,      r2 * sin_ta_2da,      width * 0.5);
+		ix3 = VERTEX(r2 * cos_ta_2da,      r2 * sin_ta_2da,      -width * 0.5);
+		for (j = 0; j < 4; j++) {
+			NORMAL(cos_ta,               sin_ta,               0.0);
+		}
+		INDEX(ix0, ix1, ix2);
+		INDEX(ix1, ix3, ix2);
+		ix0 = VERTEX(r2 * cos_ta_2da,      r2 * sin_ta_2da,      width * 0.5);
+		ix1 = VERTEX(r2 * cos_ta_2da,      r2 * sin_ta_2da,      -width * 0.5);
+		ix2 = VERTEX(r1 * cos_ta_3da,      r1 * sin_ta_3da,      width * 0.5);
+		ix3 = VERTEX(r1 * cos_ta_3da,      r1 * sin_ta_3da,      -width * 0.5);
+		for (j = 0; j < 4; j++) {
+			NORMAL(v2,                   -u2,                  0.0);
+		}
+		INDEX(ix0, ix1, ix2);
+		INDEX(ix1, ix3, ix2);
+		ix0 = VERTEX(r1 * cos_ta_3da,      r1 * sin_ta_3da,      width * 0.5);
+		ix1 = VERTEX(r1 * cos_ta_3da,      r1 * sin_ta_3da,      -width * 0.5);
+		ix2 = VERTEX(r1 * cos_ta_4da,      r1 * sin_ta_4da,      width * 0.5);
+		ix3 = VERTEX(r1 * cos_ta_4da,      r1 * sin_ta_4da,      -width * 0.5);
+		for (j = 0; j < 4; j++) {
+			NORMAL(cos_ta,               sin_ta,               0.0);
+		}
+		INDEX(ix0, ix1, ix2);
+		INDEX(ix1, ix3, ix2);
+
+		// draw inside radius cylinder
+		ix0 = VERTEX(r0 * cos_ta,          r0 * sin_ta,          -width * 0.5);
+		ix1 = VERTEX(r0 * cos_ta,          r0 * sin_ta,          width * 0.5);
+		ix2 = VERTEX(r0 * cos_ta_4da,      r0 * sin_ta_4da,      -width * 0.5);
+		ix3 = VERTEX(r0 * cos_ta_4da,      r0 * sin_ta_4da,      width * 0.5);
+		NORMAL(-cos_ta,              -sin_ta,              0.0);
+		NORMAL(-cos_ta,              -sin_ta,              0.0);
+		NORMAL(-cos_ta_4da,          -sin_ta_4da,          0.0);
+		NORMAL(-cos_ta_4da,          -sin_ta_4da,          0.0);
+		INDEX(ix0, ix1, ix2);
+		INDEX(ix1, ix3, ix2);
 	}
-	glEnd();
 
-	// draw back sides of teeth
-	glBegin(GL_QUADS);
-	da = 2.0 * M_PI / teeth / 4.0;
-	for (i = 0; i < teeth; i++)
-	{
-		angle = i * 2.0 * M_PI / teeth;
-
-		glVertex3f(r1 * cos(angle + 3 * da), r1 * sin(angle + 3 * da), -width * 0.5);
-		glVertex3f(r2 * cos(angle + 2 * da), r2 * sin(angle + 2 * da), -width * 0.5);
-		glVertex3f(r2 * cos(angle + da), r2 * sin(angle + da), -width * 0.5);
-		glVertex3f(r1 * cos(angle), r1 * sin(angle), -width * 0.5);
-	}
-	glEnd();
-
-	// draw outward faces of teeth
-	glBegin(GL_QUAD_STRIP);
-	for (i = 0; i < teeth; i++)
-	{
-		angle = i * 2.0 * M_PI / teeth;
-
-		glVertex3f(r1 * cos(angle), r1 * sin(angle), width * 0.5);
-		glVertex3f(r1 * cos(angle), r1 * sin(angle), -width * 0.5);
-		u = r2 * cos(angle + da) - r1 * cos(angle);
-		v = r2 * sin(angle + da) - r1 * sin(angle);
-		len = sqrt(u * u + v * v);
-		u /= len;
-		v /= len;
-		glNormal3f(v, -u, 0.0);
-		glVertex3f(r2 * cos(angle + da), r2 * sin(angle + da), width * 0.5);
-		glVertex3f(r2 * cos(angle + da), r2 * sin(angle + da), -width * 0.5);
-		glNormal3f(cos(angle), sin(angle), 0.0);
-		glVertex3f(r2 * cos(angle + 2 * da), r2 * sin(angle + 2 * da), width * 0.5);
-		glVertex3f(r2 * cos(angle + 2 * da), r2 * sin(angle + 2 * da), -width * 0.5);
-		u = r1 * cos(angle + 3 * da) - r2 * cos(angle + 2 * da);
-		v = r1 * sin(angle + 3 * da) - r2 * sin(angle + 2 * da);
-		glNormal3f(v, -u, 0.0);
-		glVertex3f(r1 * cos(angle + 3 * da), r1 * sin(angle + 3 * da), width * 0.5);
-		glVertex3f(r1 * cos(angle + 3 * da), r1 * sin(angle + 3 * da), -width * 0.5);
-		glNormal3f(cos(angle), sin(angle), 0.0);
-	}
-
-	glVertex3f(r1 * cos(0), r1 * sin(0), width * 0.5);
-	glVertex3f(r1 * cos(0), r1 * sin(0), -width * 0.5);
-
-	glEnd();
-
-	glShadeModel(GL_SMOOTH);
-
-	// draw inside radius cylinder
-	glBegin(GL_QUAD_STRIP);
-	for (i = 0; i <= teeth; i++)
-	{
-		angle = i * 2.0 * M_PI / teeth;
-		glNormal3f(-cos(angle), -sin(angle), 0.0);
-		glVertex3f(r0 * cos(angle), r0 * sin(angle), -width * 0.5);
-		glVertex3f(r0 * cos(angle), r0 * sin(angle), width * 0.5);
-	}
-	glEnd();
-
+	return gear;
 }
-*/
+
 static GLfloat view_rotx = 20.0, view_roty = 30.0, view_rotz = 0.0;
 static GLfloat inc_rotx = 0, inc_roty = 0, inc_rotz = 0;
-static GLint gear1, gear2, gear3;
+static gear_t *gear1, *gear2, *gear3;
 static GLfloat angle = 0.0;
 /*
 static void draw(void)
@@ -300,6 +354,11 @@ static void init(int argc, char *argv[])
 			printf("Auto Exit after %i seconds.\n", autoexit );
 		}
 	}
+
+	// make the gears
+	gear1 = gear(1.0, 4.0, 1.0, 20, 0.7, red);
+	gear2 = gear(0.5, 2.0, 2.0, 10, 0.7, green);
+	gear3 = gear(1.3, 2.0, 0.5, 10, 0.7, blue);
 }
 
 int main(int argc, char *argv[])
