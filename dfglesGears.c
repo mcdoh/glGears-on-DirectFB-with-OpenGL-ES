@@ -80,6 +80,7 @@ static inline unsigned long get_millis()
 #endif
 
 static GLint autoexit = 0;
+static GLfloat viewDist = 40.0;
 
 typedef struct
 {
@@ -271,10 +272,53 @@ static gear_t* gear(GLfloat inner_radius, GLfloat outer_radius, GLfloat width,
 	return gear;
 }
 
+void draw_gear(gear_t* gear)
+{
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, gear->color);
+	glVertexPointer(3, GL_FLOAT, sizeof(vertex_t), gear->vertices[0].pos);
+	glNormalPointer(GL_FLOAT, sizeof(vertex_t), gear->vertices[0].norm);
+	glDrawElements(GL_TRIANGLES, gear->nindices/3, GL_UNSIGNED_SHORT, gear->indices);
+}
+
 static GLfloat view_rotx = 20.0, view_roty = 30.0, view_rotz = 0.0;
 static GLfloat inc_rotx = 0, inc_roty = 0, inc_rotz = 0;
 static gear_t *gear1, *gear2, *gear3;
 static GLfloat angle = 0.0;
+
+static void draw(void)
+{
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  glPushMatrix();
+
+    glTranslatef(0.0, 0.0, -viewDist);
+
+    glRotatef(view_rotx, 1.0, 0.0, 0.0);
+    glRotatef(view_roty, 0.0, 1.0, 0.0);
+    glRotatef(view_rotz, 0.0, 0.0, 1.0);
+
+    glPushMatrix();
+      glTranslatef(-3.0, -2.0, 0.0);
+      glRotatef(angle, 0.0, 0.0, 1.0);
+      draw_gear(gear1);
+    glPopMatrix();
+
+    glPushMatrix();
+      glTranslatef(3.1, -2.0, 0.0);
+      glRotatef(-2.0 * angle - 9.0, 0.0, 0.0, 1.0);
+      draw_gear(gear2);
+    glPopMatrix();
+
+    glPushMatrix();
+      glTranslatef(-3.1, 4.2, 0.0);
+      glRotatef(-2.0 * angle - 25.0, 0.0, 0.0, 1.0);
+      draw_gear(gear3);
+    glPopMatrix();
+
+  glPopMatrix();
+  glFinish();
+}
+
 /*
 static void draw(void)
 {
@@ -412,7 +456,7 @@ int main(int argc, char *argv[])
 
 		DFBCHECK(primary_gl->Lock(primary_gl));
 
-//		draw();
+		draw();
 
 		DFBCHECK(primary_gl->Unlock(primary_gl));
 
