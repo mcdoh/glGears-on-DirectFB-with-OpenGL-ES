@@ -358,7 +358,7 @@ static void reshape(int width, int height)
 	glViewport(0, 0, (GLint) width, (GLint) height);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glFrustumf(-1.0, 1.0, -h, h, 5.0, 60.0);
+	glFrustumf(-1.0, 1.0, -h, h, 5.0, 200.0);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glTranslatef(0.0, 0.0, -40.0);
